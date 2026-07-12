@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRIS Ultimate - Game Bucin Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght=700&family=Great+Vibes&family=Quicksand:wght=400;600;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #ffe4e1 0%, #ffb6c1 50%, #ff69b4 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            perspective: 1000px;
+        }
+
+        /* --- STAGE 1: QRIS SCREEN --- */
+        .qris-wrapper {
+            background: #ffffff;
+            width: 350px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(214, 51, 132, 0.3);
+            padding: 25px;
+            text-align: center;
+            border: 3px solid #ffb6c1;
+            position: relative;
+            z-index: 10;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .qris-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 3px dashed #ffb6c1;
+            padding-bottom: 12px;
+        }
+
+        .qris-logo { font-size: 26px; font-weight: 800; color: #d63384; letter-spacing: 1px; }
+        .qris-logo span { color: #ff1493; }
+        .nmid-text { font-size: 11px; color: #888; font-weight: bold; }
+        .merchant-name { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 5px; }
+        .merchant-loc { font-size: 12px; color: #666; margin-bottom: 20px; }
+
+        .qr-box {
+            background: #fff0f5; padding: 20px; border-radius: 20px;
+            border: 3px solid #ff69b4; display: inline-block;
+            position: relative; cursor: pointer; box-shadow: 0 8px 20px rgba(214, 51, 132, 0.15);
+            overflow: hidden;
+        }
+
+        .mock-qr {
+            width: 210px; height: 210px;
+            background: linear-gradient(45deg, #ff69b4 25%, #fff 25%, #fff 50%, #ff69b4 50%, #ff69b4 75%, #fff 75%, #fff 100%);
+            background-size: 20px 20px; border: 4px solid #d63384;
+            display: flex; justify-content: center; align-items: center; position: relative;
+        }
+
+        .qr-center-heart {
+            background: white; padding: 12px; border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 5; font-size: 22px;
+            animation: pulse 1s infinite;
+        }
+
+        .scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(to right, transparent, #ff1493, transparent);
+            box-shadow: 0 0 12px #ff1493; animation: scanMove 2s linear infinite;
+            display: none; z-index: 4;
+        }
+
+        .success-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; opacity: 0;
+            transition: opacity 0.4s ease; z-index: 6; pointer-events: none;
+        }
+        .success-icon { font-size: 50px; animation: scaleUp 0.5s ease forwards; }
+        .success-text { color: #d63384; font-weight: 700; margin-top: 10px; }
+        .scan-instruction { margin-top: 20px; font-size: 14px; font-weight: 700; color: #d63384; animation: bounce 1.5s infinite; }
+
+        /* --- STAGE: LOCK SCREEN PIN --- */
+        .pin-wrapper {
+            display: none; background: #ffffff; width: 340px; border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15); padding: 30px 20px; text-align: center;
+            border: 2px solid #ffb6c1; position: relative; z-index: 10;
+            opacity: 0; transform: scale(0.9); transition: all 0.5s ease;
+        }
+        .pin-title { font-size: 16px; font-weight: 700; color: #d63384; margin-bottom: 20px; }
+        .pin-dots { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; }
+        .dot { width: 16px; height: 16px; border: 2px solid #ffb6c1; border-radius: 50%; transition: background 0.2s; }
+        .dot.active { background: #ff1493; border-color: #ff1493; box-shadow: 0 0 8px #ff1493; }
+        .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 240px; margin: 0 auto; }
+        .btn-key {
+            background: #fff0f5; border: none; width: 60px; height: 60px; border-radius: 50%;
+            font-size: 20px; font-weight: 700; color: #d63384; cursor: pointer; transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center; margin: 0 auto;
+        }
+        .btn-key:active { background: #ff1493; color: white; transform: scale(0.9); }
+        .shake { animation: shakeAnim 0.4s ease-in-out; }
+
+        /* --- STAGE 2: ENVELOPE OPENING --- */
+        .envelope-wrapper {
+            display: none; position: relative; z-index: 10; cursor: pointer;
+            opacity: 0; transform: scale(0.8); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .envelope {
+            position: relative; width: 340px; height: 230px; background: #ff52a2;
+            border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        .envelope::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 0; height: 0;
+            border-left: 170px solid transparent; border-right: 170px solid transparent;
+            border-top: 125px solid #ff1493; transform-origin: top; transition: transform 0.6s ease; z-index: 3;
+        }
+        .envelope::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 0;
+            border-left: 170px solid #ff52a2; border-right: 170px solid #ff52a2;
+            border-bottom: 115px solid #ff338b; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 2;
+        }
+        .letter-peek {
+            position: absolute; top: 12px; left: 15px; width: 310px; height: 180px;
+            background: linear-gradient(#fff 95%, #e1e1e1 100%); background-size: 100% 24px;
+            border-radius: 8px; z-index: 1; transition: transform 0.8s ease;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+        }
+        .letter-peek p { font-family: 'Dancing Script', cursive; font-size: 22px; color: #d63384; text-align: center; font-weight: bold; }
+        .heart-seal {
+            position: absolute; top: 105px; left: 155px; width: 30px; height: 30px;
+            background: #e11d48; transform: rotate(45deg); z-index: 4; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .heart-seal::before, .heart-seal::after { content: ''; width: 30px; height: 30px; background: #e11d48; border-radius: 50%; position: absolute; }
+        .heart-seal::before { left: -15px; } .heart-seal::after { top: -15px; }
+        .envelope-text { position: absolute; bottom: -50px; width: 100%; text-align: center; font-weight: 700; color: #ffffff; font-size: 16px; text-shadow: 0 2px 5px rgba(0,0,0,0.2); animation: bounce 1.5s infinite; }
+        .envelope-wrapper.open .envelope::before { transform: rotateX(180deg); z-index: 0; }
+        .envelope-wrapper.open .letter-peek { transform: translateY(-110px) scale(1.05); z-index: 3; }
+        .envelope-wrapper.open .heart-seal { opacity: 0; pointer-events: none; }
+
+        /* --- STAGE 3: MAIN SHOWCASE --- */
+        .main-showcase {
+            display: none; width: 100%; max-width: 480px; z-index: 10;
+            opacity: 0; transform: translateY(40px); transition: all 0.8s ease; padding: 15px;
+            max-height: 90vh; overflow-y: auto; scrollbar-width: none;
+        }
+        .main-showcase::-webkit-scrollbar { display: none; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95); border-radius: 30px;
+            box-shadow: 0 30px 70px rgba(214, 51, 132, 0.35); border: 3px solid rgba(255, 192, 203, 0.6);
+            padding: 25px; text-align: center; position: relative; backdrop-filter: blur(15px);
+        }
+        .card-title { font-family: 'Great Vibes', cursive; font-size: 46px; color: #ff1493; margin-bottom: 15px; }
+
+        /* Carousel */
+        .gallery-container {
+            width: 100%; height: 260px; position: relative; border-radius: 20px;
+            overflow: hidden; margin-bottom: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+            background: #ffe4e1; border: 4px solid white;
+        }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: all 0.8s ease-in-out; transform: scale(1.08); display: flex; justify-content: center; align-items: center; }
+        .slide.active { opacity: 1; transform: scale(1); z-index: 2; }
+        .placeholder-slide { background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%); color: white; flex-direction: column; gap: 12px; padding: 25px; }
+        .placeholder-slide span { font-size: 50px; animation: pulse 1.2s infinite; }
+        .placeholder-slide p { font-size: 15px; font-weight: 700; }
+
+        .gallery-btn {
+            position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.9);
+            border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 14px; color: #ff1493;
+            cursor: pointer; z-index: 15; transition: all 0.3s; display: flex; justify-content: center; align-items: center;
+        }
+        .gallery-btn:hover { background: #ff1493; color: white; }
+        .prev-btn { left: 12px; } .next-btn { right: 12px; }
+
+        /* Typing Box */
+        .love-words { font-size: 15px; color: #444; line-height: 1.7; min-height: 80px; margin-bottom: 20px; font-weight: 600; padding: 0 5px; }
+
+        /* Mini Game Box */
+        .game-section { background: #fff0f5; padding: 15px; border-radius: 20px; margin-bottom: 20px; border: 2px solid #ffb6c1; text-align: center; }
+        .game-instruction { font-size: 13px; font-weight: 700; color: #d63384; margin-bottom: 5px; }
+        .game-target-box { width: 100%; height: 130px; background: white; border-radius: 15px; position: relative; overflow: hidden; border: 1px inset #ffe4e1; margin-top: 10px; }
+        .whack-btn {
+            position: absolute; background: linear-gradient(135deg, #ff69b4, #ff1493); color: white;
+            border: none; padding: 10px 18px; font-size: 12px; font-weight: 700; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(255, 20, 147, 0.4); transition: all 0.1s ease;
+            transform: translate(-50%, -50%); top: 50%; left: 50%;
+        }
+        .whack-btn:active { transform: translate(-50%, -50%) scale(0.9); }
+        .secret-prize-box { display: none; background: #e8f5e9; border: 2px dashed #4caf50; padding: 12px; border-radius: 15px; margin-top: 10px; animation: scaleUp 0.5s ease forwards; }
+        .secret-prize-box p { font-size: 13px; font-weight: 700; color: #2e7d32; line-height: 1.5; }
+
+        /* Love Slider */
+        .slider-section { background: rgba(255, 240, 245, 0.7); padding: 15px; border-radius: 20px; margin-bottom: 20px; border: 1px dashed #ffb6c1; }
+        .slider-label { font-size: 13px; font-weight: 700; color: #d63384; margin-bottom: 10px; display: block; }
+        .love-range { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 50px; background: #ffe4e1; outline: none; }
+        .love-range::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #ff1493; cursor: pointer; box-shadow: 0 0 8px #ff1493; }
+        .counter-display { font-size: 16px; font-weight: bold; color: #ff1493; margin-top: 8px; }
+
+        /* Vouchers */
+        .voucher-title { font-size: 14px; font-weight: 700; color: #444; margin: 15px 0 10px 0; text-align: left; }
+        .voucher-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .voucher-card {
+            background: linear-gradient(135deg, #fff 60%, #fff0f5 100%); border: 2px dashed #ff69b4;
+            padding: 12px 5px; border-radius: 12px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .voucher-card span { font-size: 20px; display: block; margin-bottom: 4px; }
+        .voucher-card p { font-size: 10px; font-weight: 700; color: #d63384; }
+        .voucher-card.claimed { background: #e0e0e0; border-color: #999; opacity: 0.7; transform: scale(0.95); cursor: not-allowed; }
+        .voucher-card.claimed::after { content: "CLAIMED"; position: absolute; top: 35%; left: -10px; right: -10px; background: #666; color: white; font-size: 8px; font-weight: bold; transform: rotate(-15deg); padding: 2px 0; }
+
+        /* Music Widget */
+        .music-widget { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); border-radius: 20px; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; }
+        .music-info { display: flex; align-items: center; gap: 12px; text-align: left; }
+        .music-icon { font-size: 24px; animation: spin 4s linear infinite; }
+        .music-title { font-size: 13px; font-weight: 700; color: #d63384; }
+        .music-sub { font-size: 10px; color: #555; }
+
+        /* Animations */
+        .click-heart { position: absolute; pointer-events: none; color: #ff1493; animation: clickExplode 0.8s ease-out forwards; z-index: 999; font-size: 20px; }
+        #confettiCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 99; }
+
+        @keyframes scanMove { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+        @keyframes scaleUp { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes clickExplode {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.2); opacity: 0; }
+        }
+        @keyframes shakeAnim {
+            0%, 100% { transform: translateX(0) scale(1); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+    </style>
+</head>
+<body onclick="spawnClickHeart(event)">
+
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- STAGE 1: QRIS SCREEN WITH LIVE SCANNER -->
+    <div class="qris-wrapper" id="qrisContainer">
+        <div class="qris-header">
+            <div class="qris-logo">QRIS<span>.</span></div>
+            <div class="nmid-text">NMID: ID2026-GAMEBUCIN</div>
+        </div>
+        <div class="merchant-name">QUICK RESPONSE INDONESIA SAYANG</div>
+        <div class="merchant-loc">LIMIT: UNLIMITED KASIH SAYANG</div>
+        
+        <div class="qr-box" onclick="triggerScanning(event)">
+            <div class="scan-line" id="laserLine"></div>
+            <div class="mock-qr">
+                <div class="qr-center-heart">❤️</div>
+            </div>
+            <div class="success-overlay" id="successScreen">
+                <div class="success-icon">✅</div>
+                <div class="success-text">PAYMENT SUCCESS!</div>
+            </div>
+        </div>
+        <div class="scan-instruction">Tap QRIS untuk Scan Pembayaran Cinta ❤️</div>
+    </div>
+
+    <!-- STAGE: ENTER PIN SCREEN -->
+    <div class="pin-wrapper" id="pinContainer">
+        <p class="pin-title">Masukkan 6-Digit PIN Jadian / Rahasia 🥰</p>
+        <div class="pin-dots">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <div class="pin-pad">
+            <button class="btn-key" onclick="pressKey(1)">1</button>
+            <button class="btn-key" onclick="pressKey(2)">2</button>
+            <button class="btn-key" onclick="pressKey(3)">3</button>
+            <button class="btn-key" onclick="pressKey(4)">4</button>
+            <button class="btn-key" onclick="pressKey(5)">5</button>
+            <button class="btn-key" onclick="pressKey(6)">6</button>
+            <button class="btn-key" onclick="pressKey(7)">7</button>
+            <button class="btn-key" onclick="pressKey(8)">8</button>
+            <button class="btn-key" onclick="pressKey(9)">9</button>
+            <button class="btn-key" style="font-size:12px; background:#ffe4e1;" onclick="pressKey('C')">Clear</button>
+            <button class="btn-key" onclick="pressKey(0)">0</button>
+            <button class="btn-key" style="font-size:16px; background:#ffb6c1;" onclick="submitPin()">✓</button>
+        </div>
+    </div>
+
+    <!-- STAGE 2: THE ENVELOPE -->
+    <div class="envelope-wrapper" id="envelopeContainer" onclick="openLetter()">
+        <div class="envelope">
+            <div class="letter-peek">
+                <p>PIN Benar! 🎉</p>
+                <p style="font-size: 14px; margin-top: 5px; color: #555;">Membuka surat amanah khusus...</p>
+            </div>
+            <div class="heart-seal"></div>
+        </div>
+        <div class="envelope-text">Klik surat untuk buka segel kejutan 💖</div>
+    </div>
+
+    <!-- STAGE 3: THE MAIN SHOWCASE -->
+    <div class="main-showcase" id="showcaseContainer">
+        <div class="card">
+            <h1 class="card-title">Spesial Untukmu...</h1>
+            
+            <div class="gallery-container">
+                <button class="gallery-btn prev-btn" onclick="moveSlide(-1); event.stopPropagation();">❮</button>
+                <button class="gallery-btn next-btn" onclick="moveSlide(1); event.stopPropagation();">❯</button>
+                
+                <div class="slide active">
+                    <img src="foto1.jpg" alt="Foto 1" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <!-- Slide 2 -->
+                <div class="slide">
+                    <img src="foto2.jpg" alt="Foto 2" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            </div>
+
+            <!-- Typing Word Box -->
+            <div class="love-words" id="loveText"></div>
+
+            <!-- MINI GAME: WHACK A HEART -->
+            <div class="game-section" id="gameArea">
+                <div class="game-instruction">🎮 Mini Game: Kumpulkan <span id="targetScore" style="color:#ff1493;">5</span> Skor Cinta!</div>
+                <div class="game-instruction" style="font-size:11px; font-weight:normal; color:#666;">Ketuk tombol pink yang bergerak cepat di bawah:</div>
+                <div style="font-weight:bold; color:#ff1493; margin-top:5px; font-size:14px;">Skor Kamu: <span id="whackScore">0</span> / 5</div>
+                
+                <div class="game-target-box" id="targetBox">
+                    <button class="whack-btn" id="targetBtn" onclick="hitTarget(event)">💖 TAP AKU! 💖</button>
+                </div>
+            </div>
+            <!-- Hadiah Kejutan Game Selesai -->
+            <div class="secret-prize-box" id="secretPrize">
+                <p>🔓 SURAT RAHASIA TERBUKA:</p>
+                <p style="font-weight:normal; font-size:12px; margin-top:5px; color:#1b5e20;">
+                    "Makasih ya udah mainin gamenya! Intinya, gak ada alasan khusus kenapa aku sayang banget sama kamu. Tapi yang jelas, hari-hariku selalu jadi jauh lebih indah sejak ada kamu di dalamnya. Tetap sama aku terus ya? 🥺❤️"
+                </p>
+            </div>
+
+            <!-- INTERACTIVE SLIDER RATING -->
+            <div class="slider-section" style="margin-top:20px;">
+                <span class="slider-label">Seberapa kangen kamu sama aku hari ini? 🤔</span>
+                <input type="range" min="0" max="100" value="50" class="love-range" id="loveSlider" oninput="updateSlider(this.value)">
+                <div class="counter-display" id="sliderStatus">50% Kangen Biasa 😏</div>
+            </div>
+
+            <!-- INTERACTIVE VOUCHERS -->
+            <div class="voucher-title">🎟️ Klaim Voucher Hadiah dari Aku:</div>
+            <div class="voucher-grid">
+                <div class="voucher-card" onclick="claimVoucher(this, 'Deep Talk Sepuasnya')">
+                    <span>☕</span><p>Deep Talk</p>
+                </div>
+                <div class="voucher-card" onclick="claimVoucher(this, 'Peluk & Cium Jidat')">
+                    <span>🤗</span><p>Hug & Kiss</p>
+                </div>
+                <div class="voucher-card" onclick="claimVoucher(this, 'Bebas Marah 1 Hari')">
+                    <span>👑</span><p>Anti Marah</p>
+                </div>
+            </div>
+
+            <!-- Music Widget Info -->
+            <div class="music-widget">
+                <div class="music-info">
+                    <div class="music-icon">🎵</div>
+                    <div>
+                        <div class="music-title">Shape Of My Heart</div>
+                        <div class="music-sub">Backstreet Boys (Looping Mode)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pemutar MP3 Lokal -->
+    <audio id="romanticAudio" loop preload="auto">
+        <source src="lagu.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ==========================================
+        //  PENGATURAN KREASI UTAMA
+        // ==========================================
+        const CORRECT_PIN = "123456"; // Ganti PIN kamu di sini
+
+        const romanticQuotes = [
+            "Transaksi berhasil! Saldo kasih sayangku ditransfer penuh tanpa potongan ke rekening hatimu. 🥰",
+            "Tahu tidak? Dari miliaran manusia di bumi, duniaku cuma mau berputar dan menetap di kamu saja. 🌸",
+            "Melihat senyuman kamu itu rasanya seperti dengerin lagu favorit; menenangkan dan bikin candu. ✨"
+        ];
+
+        let currentQuoteIndex = 0;
+        let currentSlideIndex = 0;
+        let isEngineStarted = false;
+        let currentPinInput = "";
+        let gameScore = 0;
+
+        // --- EFFECT: EXPLOSION TAP ---
+        function spawnClickHeart(e) {
+            const hearts = ["❤️", "💖", "✨", "🌸", "💕"];
+            for (let i = 0; i < 4; i++) {
+                const ch = document.createElement("div");
+                ch.classList.add("click-heart");
+                ch.innerText = hearts[Math.floor(Math.random() * hearts.length)];
+                ch.style.left = e.clientX + "px"; ch.style.top = e.clientY + "px";
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 40 + 20;
+                ch.style.setProperty('--x', Math.cos(angle) * distance + "px");
+                ch.style.setProperty('--y', Math.sin(angle) * distance + "px");
+                document.body.appendChild(ch);
+                setTimeout(() => ch.remove(), 800);
+            }
+        }
+
+        // --- STEP 1: SCANNING HANDLING ---
+        function triggerScanning(e) {
+            e.stopPropagation();
+            const laser = document.getElementById('laserLine');
+            const success = document.getElementById('successScreen');
+            laser.style.display = 'block';
+            
+            setTimeout(() => {
+                laser.style.display = 'none';
+                success.style.opacity = '1';
+                setTimeout(() => { transitionToPinScreen(); }, 1000);
+            }, 2000);
+        }
+
+        function transitionToPinScreen() {
+            const qris = document.getElementById('qrisContainer');
+            const pinScreen = document.getElementById('pinContainer');
+            qris.style.opacity = '0'; qris.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                qris.style.display = 'none';
+                pinScreen.style.display = 'block';
+                setTimeout(() => { pinScreen.style.opacity = '1'; pinScreen.style.transform = 'scale(1)'; }, 50);
+            }, 500);
+        }
+
+        // --- STEP 2: PIN NUMBER ENGINE ---
+        function pressKey(num) {
+            const dots = document.querySelectorAll('.dot');
+            if (num === 'C') {
+                currentPinInput = "";
+                dots.forEach(d => d.classList.remove('active'));
+                return;
+            }
+            if (currentPinInput.length < 6) {
+                currentPinInput += num;
+                dots[currentPinInput.length - 1].classList.add('active');
+            }
+        }
+
+        function submitPin() {
+            const pinScreen = document.getElementById('pinContainer');
+            const envelope = document.getElementById('envelopeContainer');
+            
+            if (currentPinInput === CORRECT_PIN) {
+                pinScreen.style.opacity = '0'; pinScreen.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    pinScreen.style.display = 'none';
+                    envelope.style.display = 'block';
+                    setTimeout(() => { envelope.style.opacity = '1'; envelope.style.transform = 'scale(1)'; }, 50);
+                }, 500);
+            } else {
+                pinScreen.classList.add('shake');
+                currentPinInput = "";
+                document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
+                alert("PIN Salah sayang! Coba lagi 😜 (Petunjuk: 123456)");
+                setTimeout(() => pinScreen.classList.remove('shake'), 400);
+            }
+        }
+
+        // --- STEP 3: ENVELOPE OPEN & LOCAL AUDIO MP3 ---
+        function openLetter() {
+            const envelope = document.getElementById('envelopeContainer');
+            const showcase = document.getElementById('showcaseContainer');
+            envelope.classList.add('open');
+            
+            // MENYALAKAN AUDIO MP3 LOKAL
+            const audio = document.getElementById('romanticAudio');
+            if (audio) {
+                audio.play().catch(error => {
+                    console.log("Autoplay diblokir, menyiapkan fungsi ketukan cadangan.", error);
+                    // Jika browser galak, lagu dipaksa menyala begitu layar diketuk sekali lagi
+                    document.body.addEventListener('click', () => { audio.play(); }, { once: true });
+                });
+            }
+
+            setTimeout(() => {
+                envelope.style.opacity = '0'; envelope.style.transform = 'translateY(-50px)';
+                setTimeout(() => {
+                    envelope.style.display = 'none';
+                    showcase.style.display = 'block';
+                    setTimeout(() => {
+                        showcase.style.opacity = '1'; showcase.style.transform = 'translateY(0)';
+                        initUltimateEngine();
+                        triggerConfettiShower();
+                    }, 50);
+                }, 400);
+            }, 900);
+        }
+
+        // --- STEP 4: CORE ENGINE ---
+        function initUltimateEngine() {
+            if (isEngineStarted) return;
+            isEngineStarted = true;
+            
+            startTypingQuotes();
+            setInterval(startTypingQuotes, 7000); 
+            setInterval(() => moveSlide(1), 4000);
+            moveTargetButton(); 
+        }
+
+        function startTypingQuotes() {
+            const container = document.getElementById('loveText');
+            if(!container) return;
+            const fullText = romanticQuotes[currentQuoteIndex];
+            container.innerHTML = "";
+            let i = 0;
+            function type() {
+                if (i < fullText.length) {
+                    container.innerHTML += fullText.charAt(i);
+                    i++;
+                    setTimeout(type, 35);
+                }
+            }
+            type();
+            currentQuoteIndex = (currentQuoteIndex + 1) % romanticQuotes.length;
+        }
+
+        function moveSlide(dir) {
+            const slides = document.querySelectorAll('.slide');
+            if (slides.length === 0) return;
+            slides[currentSlideIndex].classList.remove('active');
+            currentSlideIndex = (currentSlideIndex + dir + slides.length) % slides.length;
+            slides[currentSlideIndex].classList.add('active');
+        }
+
+        // --- GAME MECHANIC: WHACK A HEART ---
+        function moveTargetButton() {
+            if (gameScore >= 5) return; 
+            const btn = document.getElementById('targetBtn');
+            const box = document.getElementById('targetBox');
+            if(!btn || !box) return;
+            
+            const maxX = box.clientWidth - 100;
+            const maxY = box.clientHeight - 40;
+            
+            const randomX = Math.floor(Math.random() * maxX) + 50;
+            const randomY = Math.floor(Math.random() * maxY) + 20;
+            
+            btn.style.left = randomX + "px";
+            btn.style.top = randomY + "px";
+            
+            setTimeout(moveTargetButton, 1200);
+        }
+
+        function hitTarget(e) {
+            e.stopPropagation();
+            if (gameScore >= 5) return;
+            
+            gameScore++;
+            document.getElementById('whackScore').innerText = gameScore;
+            triggerConfettiShower();
+            
+            if (gameScore >= 5) {
+                document.getElementById('gameArea').style.background = "#e8f5e9";
+                document.getElementById('gameArea').innerHTML = "<div style='color:#2e7d32; font-weight:bold; font-size:15px;'>🎉 Horeee! Misi Selesai! 🎉</div>";
+                document.getElementById('secretPrize').style.display = "block";
+                triggerConfettiShower();
+            } else {
+                moveTargetButton(); 
+            }
+        }
+
+        // --- OTHER ENGINE COMPONENTS ---
+        function updateSlider(val) {
+            const status = document.getElementById('sliderStatus');
+            let txt = "";
+            if (val < 30) txt = `${val}% Kangen biasa aja bumbu kacang 🤨`;
+            else if (val < 60) txt = `${val}% Kangen pengen cepet ketemu! 😏`;
+            else if (val < 90) txt = `${val}% Kangen tingkat tinggi meleleh 🫠`;
+            else txt = `${val}% KANGEN BRUTAL MELEDAK-LEDAK! 🔥❤️`;
+            status.innerHTML = txt;
+        }
+
+        function claimVoucher(element, voucherName) {
+            if (element.classList.contains('claimed')) return;
+            element.classList.add('claimed');
+            triggerConfettiShower();
+            alert(`🎉 Berhasil diklaim!\nScreenshot dan kirim ke aku untuk menukarkan voucher "${voucherName}" kamu ya! 🤫`);
+        }
+
+        function triggerConfettiShower() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            let particles = [];
+            const colors = ['#ff1493', '#ff69b4', '#ffb6c1', '#ffffff', '#ff4500'];
+
+            for (let i = 0; i < 80; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: canvas.height + 10,
+                    radius: Math.random() * 4 + 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: -(Math.random() * 10 + 6),
+                    opacity: 1
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let active = false;
+                particles.forEach(p => {
+                    if (p.opacity > 0) {
+                        active = true; p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.opacity -= 0.01;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color; ctx.globalAlpha = p.opacity; ctx.fill();
+                    }
+                });
+                if (active) requestAnimationFrame(draw);
+            }
+            draw();
+        }
+    </script>
+</body>
+</html>
